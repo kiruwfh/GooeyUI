@@ -2,7 +2,7 @@
 -- You would run this script in an executor after uploading Gooey.lua to your GitHub.
 
 -- 1. Load the library using the raw GitHub link
-local raw_link = "https://raw.githubusercontent.com/kiruwfh/GooeyUI/main/Gooey.lua"
+local raw_link = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Gooey.lua"
 local Gooey = loadstring(game:HttpGet(raw_link))()
 
 if not Gooey then
@@ -11,10 +11,11 @@ if not Gooey then
 end
 
 -- 2. Create a new GUI manager
-local MyGui = Gooey.New("MyGooey")
+-- The library will automatically detect if the user is on mobile or PC.
+local MyGui = Gooey.New("Gooey")
 
 -- 3. Create a window
-local myWindow = MyGui:CreateWindow("Gooey | v1.0")
+local myWindow = MyGui:CreateWindow("Gooey | v1.1 Mobile")
 
 -- 4. Create tabs and get their content pages
 local pages = MyGui:CreateTabs({
@@ -22,22 +23,40 @@ local pages = MyGui:CreateTabs({
     Tabs = {"Combat", "Movement", "Visuals", "Misc"}
 })
 
--- 5. Set the initial toggle key
--- This key can be changed later using the Keybind element in the "Misc" tab
+-- 5. Set the initial toggle key (This will only work on PC)
 MyGui:SetToggleKey(Enum.KeyCode.RightShift)
 
 
--- 6. Create elements inside the pages
+-- 6. Create platform-specific elements
+if MyGui.isMobile then
+    -- On Mobile, create quick action buttons that are always on screen
+    MyGui:CreateAction({
+        Text = "SPD", -- Short text for small buttons
+        Callback = function() 
+            print("Speed action toggled!") 
+            -- Here you would toggle your speed script
+        end
+    })
+    MyGui:CreateAction({
+        Text = "FLY",
+        Callback = function() 
+            print("Fly action toggled!") 
+            -- Here you would toggle your fly script
+        end
+    })
+else
+    -- On PC, create keybinds inside the menu
+    MyGui:CreateKeybind({
+        Parent = pages.Combat,
+        Text = "Aimbot Key",
+        Default = Enum.KeyCode.F,
+        Callback = function(key)
+            print("Aimbot key set to: " .. key.Name)
+        end
+    })
+end
 
--- Combat Page
-MyGui:CreateKeybind({
-    Parent = pages.Combat,
-    Text = "Aimbot Key",
-    Default = Enum.KeyCode.F,
-    Callback = function(key)
-        print("Aimbot key set to: " .. key.Name)
-    end
-})
+-- 7. Create common elements that work on both platforms
 
 -- Movement Page
 MyGui:CreateSlider({
@@ -57,32 +76,9 @@ MyGui:CreateSlider({
 
 MyGui:CreateCheckbox({
     Parent = pages.Movement,
-    Text = "Fly",
-    Callback = function(toggled)
-        print("Fly toggled: " .. tostring(toggled))
-    end
-})
-MyGui:CreateCheckbox({
-    Parent = pages.Movement,
-    Text = "NoClip",
-    Callback = function(toggled)
-        print("NoClip toggled: " .. tostring(toggled))
-    end
-})
-MyGui:CreateCheckbox({
-    Parent = pages.Movement,
     Text = "Infinite Jump",
     Callback = function(toggled)
         print("Infinite Jump toggled: " .. tostring(toggled))
-    end
-})
-MyGui:CreateButton({
-    Parent = pages.Movement,
-    Text = "Reset Character",
-    Callback = function()
-        if game.Players.LocalPlayer.Character then
-            game.Players.LocalPlayer.Character:BreakJoints()
-        end
     end
 })
 
@@ -99,10 +95,10 @@ MyGui:CreateCheckbox({
 -- Misc Page
 MyGui:CreateKeybind({
     Parent = pages.Misc,
-    Text = "Toggle GUI",
+    Text = "Toggle GUI Key",
     Default = Enum.KeyCode.RightShift,
     Callback = function(key)
-        -- This updates the key used to open/close the menu
+        -- This updates the key used to open/close the menu on PC
         MyGui:SetToggleKey(key)
     end
 })
@@ -112,6 +108,8 @@ MyGui:CreateButton({
     Text = "Destroy GUI",
     Callback = function()
         MyGui.ScreenGui:Destroy()
+        -- This allows the script to be re-injected after being destroyed
+        _G.GooeyLoaded = nil 
     end
 })
 
