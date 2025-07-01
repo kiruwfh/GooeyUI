@@ -1,8 +1,8 @@
--- This is an example of how to use the Gooey.lua library in your own scripts.
+-- This is an example of how to use the Gooey.lua library (v2.0) in your own scripts.
 -- You would run this script in an executor after uploading Gooey.lua to your GitHub.
 
 -- 1. Load the library using the raw GitHub link
-local raw_link = "https://raw.githubusercontent.com/kiruwfh/GooeyUI/main/Gooey.lua"
+local raw_link = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Gooey.lua"
 local Gooey = loadstring(game:HttpGet(raw_link))()
 
 if not Gooey then
@@ -15,127 +15,75 @@ end
 local MyGui = Gooey.New("Gooey")
 
 -- 3. Create a window
-local myWindow = MyGui:CreateWindow("Gooey | v1.2")
+local myWindow = MyGui:CreateWindow("Gooey | v2.0")
 
 -- 4. Create tabs and get their content pages
 local pages = MyGui:CreateTabs({
     Window = myWindow,
-    Tabs = {"Combat", "Movement", "Visuals", "Misc"}
+    Tabs = {"Movement", "Visuals", "Misc"}
 })
 
 -- 5. Set the initial toggle key (This will only work on PC)
 MyGui:SetToggleKey(Enum.KeyCode.RightShift)
 
 
--- 6. Create platform-specific elements
-if MyGui.isMobile then
-    -- On Mobile, create quick action buttons that are always on screen
-    MyGui:CreateAction({
-        Text = "SPD", -- Short text for small buttons
-        Callback = function() 
-            print("Speed action toggled!") 
-            -- Here you would toggle your speed script
-        end
-    })
-    MyGui:CreateAction({
-        Text = "FLY",
-        Callback = function() 
-            print("Fly action toggled!") 
-            -- Here you would toggle your fly script
-        end
-    })
-else
-    -- On PC, create keybinds inside the menu
-    MyGui:CreateKeybind({
-        Parent = pages.Combat,
-        Text = "Aimbot Key",
-        Default = Enum.KeyCode.F,
-        Callback = function(key)
-            print("Aimbot key set to: " .. key.Name)
-        end
-    })
-end
-
--- 7. Create common elements that work on both platforms
-
--- Movement Page
-MyGui:CreateSlider({
+-- 6. Create universal toggle elements
+-- These will automatically adapt to PC (keyboard bind) or Mobile (on-screen action button)
+MyGui:CreateToggle({
     Parent = pages.Movement,
-    Text = "Walk Speed",
-    Min = 16,
-    Max = 200,
-    Default = 50,
-    Callback = function(value)
-        -- Example of how to use the value:
-        -- if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-        --     game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
-        -- end
-        print("Walkspeed set to: " .. string.format("%.2f", value))
+    Text = "Super Speed",
+    Default = false,
+    Callback = function(state)
+        print("Super Speed toggled:", state)
+        if state then
+            -- Your code to enable speed
+        else
+            -- Your code to disable speed
+        end
     end
 })
 
-MyGui:CreateCheckbox({
+MyGui:CreateToggle({
     Parent = pages.Movement,
     Text = "Fly",
-    Callback = function(toggled)
-        print("Fly toggled: " .. tostring(toggled))
+    Callback = function(state)
+        print("Fly toggled:", state)
     end
 })
 
-MyGui:CreateCheckbox({
-    Parent = pages.Movement,
-    Text = "NoClip",
-    Callback = function(toggled)
-        print("NoClip toggled: " .. tostring(toggled))
-    end
-})
-
-MyGui:CreateCheckbox({
-    Parent = pages.Movement,
-    Text = "Infinite Jump",
-    Callback = function(toggled)
-        print("Infinite Jump toggled: " .. tostring(toggled))
-    end
-})
-
--- Visuals Page
-MyGui:CreateCheckbox({
+MyGui:CreateToggle({
     Parent = pages.Visuals,
-    Text = "Enable ESP",
+    Text = "Fullbright",
     Default = true,
-    Callback = function(toggled)
-        print("ESP toggled: " .. tostring(toggled))
+    Callback = function(state)
+        print("Fullbright toggled:", state)
+        if state then
+            game:GetService("Lighting").Brightness = 2
+        else
+            game:GetService("Lighting").Brightness = 1
+        end
     end
 })
 
-MyGui:CreateCheckbox({
-    Parent = pages.Visuals,
-    Text = "Chams",
-    Default = false,
-    Callback = function(toggled)
-        print("Chams toggled: " .. tostring(toggled))
+-- 7. Other elements still work as before
+MyGui:CreateSlider({
+    Parent = pages.Movement,
+    Text = "Jump Power",
+    Min = 50,
+    Max = 300,
+    Default = 50,
+    Callback = function(value)
+        print("Jump Power set to: " .. string.format("%.0f", value))
     end
 })
 
--- Misc Page
-MyGui:CreateKeybind({
-    Parent = pages.Misc,
-    Text = "Toggle GUI Key",
-    Default = Enum.KeyCode.RightShift,
-    Callback = function(key)
-        -- This updates the key used to open/close the menu on PC
-        MyGui:SetToggleKey(key)
-    end
-})
-
+-- 8. Misc Section
 MyGui:CreateButton({
     Parent = pages.Misc,
     Text = "Destroy GUI",
     Callback = function()
         MyGui.ScreenGui:Destroy()
-        -- This allows the script to be re-injected after being destroyed
-        _G.GooeyLoaded = nil 
     end
 })
 
-print("Gooey GUI Loaded Successfully!") 
+print("Gooey v2.0 GUI Loaded Successfully!") 
