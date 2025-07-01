@@ -45,13 +45,10 @@ function Gooey.New(name)
     local self = setmetatable({}, Gooey)
     local guiName = name or "Gooey"
 
-    -- FIX: Use the most robust method to get the local player and their GUI
-    local player = game:GetService("Players").LocalPlayer
-    if not player then
-        -- This ensures the script doesn't fail if it runs before the player is fully available
-        player = game:GetService("Players").PlayerAdded:Wait()
-    end
-    local playerGui = player:WaitForChild("PlayerGui")
+    -- FINAL FIX: This is the most robust method to get PlayerGui across all executors.
+    -- Some executors run scripts so fast that LocalPlayer isn't available yet.
+    local playerGui
+    repeat wait() until pcall(function() playerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end)
 
     -- Prevent UI duplication by destroying any old GUI on re-injection
     local oldGui = playerGui:FindFirstChild(guiName)
