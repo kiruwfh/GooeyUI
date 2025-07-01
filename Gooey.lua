@@ -1,7 +1,4 @@
--- Singleton check to prevent double injection and UI duplication
-if _G.GooeyLoaded then
-    return _G.Gooey
-end
+-- This file is intended to be used with loadstring.
 
 local Gooey = {}
 Gooey.__index = Gooey
@@ -19,7 +16,7 @@ local function CreateDraggable(object)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
-            startPos = object.Parent.Position
+            startPos = object.Position -- FIX: Get the object's own position
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -34,10 +31,11 @@ local function CreateDraggable(object)
         end
     end)
 
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
+    UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
-            object.Parent.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            -- FIX: Move the object itself, not its parent
+            object.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 end
@@ -45,22 +43,30 @@ end
 
 function Gooey.New(name)
     local self = setmetatable({}, Gooey)
+    local guiName = name or "Gooey"
+
+    -- FIX: Prevent UI duplication by destroying any old GUI on re-injection
+    local playerGui = game:GetService("PlayerGui")
+    local oldGui = playerGui:FindFirstChild(guiName)
+    if oldGui then
+        oldGui:Destroy()
+    end
 
     self.ScreenGui = Instance.new("ScreenGui")
-    self.ScreenGui.Name = name or "Gooey"
+    self.ScreenGui.Name = guiName
     self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    self.ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-    self.ScreenGui.Enabled = false -- Start with main GUI hidden for mobile toggle
-    
+    self.ScreenGui.Parent = playerGui
+    self.ScreenGui.Enabled = true -- The GUI container is always enabled.
+
     self.Windows = {}
-    self.Visible = false -- Start with GUI logically hidden
-    self.ToggleKey = Enum.KeyCode.Unknown
-    self.ToggleConnection = nil
+    self.Visible = not isMobile -- GUI is visible by default on PC, hidden on mobile
     self.isMobile = isMobile
     self.ActionButtons = {}
+    self.ToggleKey = Enum.KeyCode.Unknown
+    self.ToggleConnection = nil
 
     if self.isMobile then
-        -- On mobile, create a dedicated toggle button
+        -- On mobile, create a dedicated toggle button that is always visible
         local mobileToggle = Instance.new("TextButton")
         mobileToggle.Name = "GooeyMobileToggle"
         mobileToggle.Size = UDim2.new(0, 50, 0, 50)
@@ -79,16 +85,12 @@ function Gooey.New(name)
         stroke.Thickness = 1
         stroke.Parent = mobileToggle
         
-        -- Let's add an icon later maybe, for now empty
+        -- You could add a UIGradient or an ImageLabel here to make it prettier
         CreateDraggable(mobileToggle)
 
         mobileToggle.MouseButton1Click:Connect(function()
             self:ToggleVisibility()
         end)
-    else
-        -- On PC, GUI is visible by default unless toggled
-        self.Visible = true 
-        self.ScreenGui.Enabled = true
     end
 
     return self
@@ -103,11 +105,30 @@ function Gooey:CreateWindow(title)
     local targetSize = UDim2.new(0, 450, 0, 350)
     windowFrame:SetAttribute("TargetSize", targetSize)
     
-    -- Initial state for animation
-    windowFrame.Size = UDim2.new(targetSize.X.Scale, 0, targetSize.Y.Scale, 0)
-    windowFrame.Position = UDim2.new(0.5, 0, 0.5, 0) -- Start at the center of the screen
-    windowFrame.BackgroundTransparency = 1
+    windowFrame.Visible = self.Visible -- Set initial visibility based on platform
     
+    if self.Visible then -- Only play intro animation if initially visible (on PC)
+        -- Initial state for animation
+        windowFrame.Size = UDim2.new(targetSize.X.Scale, 0, targetSize.Y.Scale, 0)
+        windowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        windowFrame.BackgroundTransparency = 1
+        
+        -- Animate the window appearing
+        local tweenService = game:GetService("TweenService")
+        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local goals = {
+            Size = targetSize,
+            BackgroundTransparency = 0.1
+        }
+        local tween = tweenService:Create(windowFrame, tweenInfo, goals)
+        tween:Play()
+    else
+        -- On mobile, just create it in its final state but hidden
+        windowFrame.Size = targetSize
+        windowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        windowFrame.BackgroundTransparency = 0.1
+    end
+
     windowFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
     windowFrame.BorderSizePixel = 0
     windowFrame.ClipsDescendants = true
@@ -171,24 +192,6 @@ function Gooey:CreateWindow(title)
 
     CreateDraggable(topBar)
     
-    -- Animate the window appearing
-    local tweenService = game:GetService("TweenService")
-    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    
-    if not self.isMobile then
-        -- Only play intro animation on PC
-        local goals = {
-            Size = targetSize,
-            BackgroundTransparency = 0.1
-        }
-        local tween = tweenService:Create(windowFrame, tweenInfo, goals)
-        tween:Play()
-    else
-        -- On mobile, just set properties instantly
-        windowFrame.Size = targetSize
-        windowFrame.BackgroundTransparency = 0.1
-    end
-
     table.insert(self.Windows, windowFrame)
 
     return windowFrame -- Return the main frame, children can be found by name
@@ -688,19 +691,28 @@ function Gooey:ToggleVisibility()
     local tweenInfoIn = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     local tweenInfoOut = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
-    -- Toggle the main ScreenGui's enabled state
-    self.ScreenGui.Enabled = self.Visible
-
     for _, window in ipairs(self.Windows) do
         local targetSize = window:GetAttribute("TargetSize") or UDim2.new(0, 450, 0, 350)
 
         if self.Visible then
-            -- The animation part for PC is handled by the ScreenGui being enabled
-            -- On mobile, we might just have it pop in.
             window.Visible = true
+            local goalsIn = {
+                Size = targetSize,
+                BackgroundTransparency = 0.1
+            }
+            tweenService:Create(window, tweenInfoIn, goalsIn):Play()
         else
-            -- And pop-out on mobile.
-            window.Visible = false
+            local goalsOut = {
+                Size = UDim2.new(targetSize.X.Scale, 0, targetSize.Y.Scale, 0),
+                BackgroundTransparency = 1
+            }
+            local tween = tweenService:Create(window, tweenInfoOut, goalsOut)
+            tween.Completed:Connect(function()
+                if window and window.Parent then
+                    window.Visible = false
+                end
+            end)
+            tween:Play()
         end
     end
 end
@@ -730,7 +742,7 @@ end
 local MyGui = Gooey.New("Gooey")
 
 -- 2. Create a window
-local myWindow = MyGui:CreateWindow("Gooey | v1.0")
+local myWindow = MyGui:CreateWindow("Gooey | v1.2")
 
 -- 3. Create tabs and get their content pages
 local pages = MyGui:CreateTabs({
@@ -831,10 +843,7 @@ MyGui:CreateButton({
     Text = "Destroy GUI",
     Callback = function()
         MyGui.ScreenGui:Destroy()
-        _G.GooeyLoaded = nil -- Allow re-injection
     end
 })
-
-_G.GooeyLoaded = Gooey -- Mark library as loaded
 
 return Gooey 
