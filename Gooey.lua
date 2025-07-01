@@ -65,6 +65,17 @@ function Gooey.New(name)
     self.Windows = {}
     self.Visible = not isMobile -- GUI is visible by default on PC, hidden on mobile
     self.isMobile = isMobile
+    self.Binds = {} -- Stores PC keybinds -> { [Enum.KeyCode] = callback }
+    
+    -- Master connection for all PC keybinds
+    if not self.isMobile then
+        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if not gameProcessed and self.Binds[input.KeyCode] then
+                pcall(self.Binds[input.KeyCode])
+            end
+        end)
+    end
+
     self.ActionButtons = {}
     self.ToggleKey = Enum.KeyCode.Unknown
     self.ToggleConnection = nil
@@ -383,13 +394,17 @@ function Gooey:CreateButton(options)
     return button
 end
 
-function Gooey:CreateCheckbox(options)
+function Gooey:CreateToggle(options)
     local parent = options.Parent
-    local text = options.Text or "Checkbox"
-    local callback = options.Callback or function() end
+    local text = options.Text or "Toggle"
     local default = options.Default or false
+    local callback = options.Callback or function() end
 
+    -- State variables for this specific toggle
     local toggled = default
+    local currentBind = Enum.KeyCode.Unknown
+    local mobileActionButton = nil
+    
     local tweenService = game:GetService("TweenService")
     local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
 
@@ -401,7 +416,7 @@ function Gooey:CreateCheckbox(options)
 
     local label = Instance.new("TextLabel")
     label.Name = "Label"
-    label.Size = UDim2.new(0.8, 0, 1, 0)
+    label.Size = UDim2.new(0.5, 0, 1, 0)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.Gotham
     label.Text = text
@@ -409,47 +424,120 @@ function Gooey:CreateCheckbox(options)
     label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = container
+    
+    local bindButton = Instance.new("TextButton")
+    bindButton.Name = "BindButton"
+    bindButton.Size = UDim2.new(0.3, -10, 1, -5)
+    bindButton.Position = UDim2.new(0.5, 5, 0.5, 0)
+    bindButton.AnchorPoint = Vector2.new(0, 0.5)
+    bindButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    bindButton.Font = Enum.Font.Gotham
+    bindButton.Text = self.isMobile and "Bind" or "[ ... ]"
+    bindButton.TextColor3 = Color3.fromRGB(180, 180, 180)
+    bindButton.TextSize = 12
+    bindButton.Parent = container
 
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "Toggle"
-    toggleButton.Size = UDim2.new(0.2, -20, 0, 20)
-    toggleButton.Position = UDim2.new(0.8, 10, 0.5, -10)
-    toggleButton.BackgroundColor3 = toggled and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(50, 50, 65)
-    toggleButton.Text = ""
-    toggleButton.Parent = container
+    local bindCorner = Instance.new("UICorner")
+    bindCorner.CornerRadius = UDim.new(0, 5)
+    bindCorner.Parent = bindButton
+
+    local toggleSwitch = Instance.new("TextButton")
+    toggleSwitch.Name = "Toggle"
+    toggleSwitch.Size = UDim2.new(0.2, -20, 0, 20)
+    toggleSwitch.Position = UDim2.new(0.8, 10, 0.5, -10)
+    toggleSwitch.BackgroundColor3 = toggled and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(50, 50, 65)
+    toggleSwitch.Text = ""
+    toggleSwitch.Parent = container
 
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(1, 0)
-    toggleCorner.Parent = toggleButton
-    
+    toggleCorner.Parent = toggleSwitch
     local toggleStroke = Instance.new("UIStroke")
     toggleStroke.Color = Color3.fromRGB(80, 80, 95)
-    toggleStroke.Thickness = 1
-    toggleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    toggleStroke.Parent = toggleButton
-
+    toggleStroke.Parent = toggleSwitch
     local knob = Instance.new("Frame")
     knob.Name = "Knob"
     knob.Size = UDim2.new(0, 16, 0, 16)
     knob.Position = toggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
     knob.BackgroundColor3 = Color3.fromRGB(200, 200, 210)
-    knob.Parent = toggleButton
-    
+    knob.Parent = toggleSwitch
     local knobCorner = Instance.new("UICorner")
     knobCorner.CornerRadius = UDim.new(1, 0)
     knobCorner.Parent = knob
-
-    toggleButton.MouseButton1Click:Connect(function()
-        toggled = not toggled
-        pcall(callback, toggled)
-
+    
+    local function UpdateToggleState(newState)
+        toggled = newState
+        
+        -- Update Visuals
         local goalKnob = { Position = toggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8) }
         local goalBg = { BackgroundColor3 = toggled and Color3.fromRGB(100, 120, 255) or Color3.fromRGB(50, 50, 65) }
-        
         tweenService:Create(knob, tweenInfo, goalKnob):Play()
-        tweenService:Create(toggleButton, tweenInfo, goalBg):Play()
+        tweenService:Create(toggleSwitch, tweenInfo, goalBg):Play()
+        
+        -- Fire callback
+        pcall(callback, toggled)
+    end
+    
+    toggleSwitch.MouseButton1Click:Connect(function()
+        UpdateToggleState(not toggled)
     end)
     
+    -- Binding Logic
+    local listening = false
+    bindButton.MouseButton1Click:Connect(function()
+        if self.isMobile then
+            if mobileActionButton then
+                mobileActionButton:Destroy()
+                mobileActionButton = nil
+                bindButton.Text = "Bind"
+            else
+                mobileActionButton = Instance.new("TextButton")
+                -- ... configure mobileActionButton (the round one)
+                mobileActionButton.Size = UDim2.new(0, 45, 0, 45)
+                mobileActionButton.Position = UDim2.new(0, 10, 0.5, 0) -- Example position
+                mobileActionButton.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                mobileActionButton.Text = string.sub(text, 1, 3)
+                mobileActionButton.Font = Enum.Font.GothamBold
+                mobileActionButton.TextColor3 = Color3.fromRGB(220, 220, 220)
+                mobileActionButton.Parent = self.ScreenGui
+                local mCorner = Instance.new("UICorner")
+                mCorner.CornerRadius = UDim.new(1, 0)
+                mCorner.Parent = mobileActionButton
+                CreateDraggable(mobileActionButton)
+                
+                mobileActionButton.MouseButton1Click:Connect(function()
+                     UpdateToggleState(not toggled)
+                end)
+                
+                bindButton.Text = "Unbind"
+            end
+        else -- PC Logic
+            if listening then return end
+            listening = true
+            bindButton.Text = "[ ... ]"
+            
+            local connection
+            connection = UserInputService.InputBegan:Connect(function(input, gp)
+                if not gp and input.UserInputType == Enum.UserInputType.Keyboard then
+                    -- Unbind old key
+                    if self.Binds[currentBind] then self.Binds[currentBind] = nil end
+                    
+                    if input.KeyCode == Enum.KeyCode.Escape then
+                        currentBind = Enum.KeyCode.Unknown
+                        bindButton.Text = "[ ... ]"
+                    else
+                        currentBind = input.KeyCode
+                        self.Binds[currentBind] = function() UpdateToggleState(not toggled) end
+                        bindButton.Text = "[ " .. currentBind.Name .. " ]"
+                    end
+                    
+                    listening = false
+                    connection:Disconnect()
+                end
+            end)
+        end
+    end)
+
     return container
 end
 
@@ -565,130 +653,6 @@ function Gooey:CreateSlider(options)
     return container
 end
 
-local activeKeybind = nil
-function Gooey:CreateKeybind(options)
-    if self.isMobile then
-        -- This component is not for mobile, use CreateAction instead
-        warn("Gooey: CreateKeybind is not recommended for mobile. Use CreateAction.")
-        return
-    end
-
-    local parent = options.Parent
-    local text = options.Text or "Keybind"
-    local defaultKey = options.Default or Enum.KeyCode.Unknown
-    local callback = options.Callback or function() end
-
-    local currentKey = defaultKey
-    local isListening = false
-
-    local container = Instance.new("Frame")
-    container.Name = text .. "Container"
-    container.Size = UDim2.new(1, 0, 0, 35)
-    container.BackgroundTransparency = 1
-    container.Parent = parent
-
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(0.6, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Gotham
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = container
-
-    local keyButton = Instance.new("TextButton")
-    keyButton.Name = "KeyButton"
-    keyButton.Size = UDim2.new(0.4, 0, 1, 0)
-    keyButton.Position = UDim2.new(0.6, 0, 0, 0)
-    keyButton.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-    keyButton.Font = Enum.Font.Gotham
-    keyButton.TextColor3 = Color3.fromRGB(220, 220, 220)
-    keyButton.TextSize = 14
-    keyButton.Parent = container
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = keyButton
-
-    local function UpdateText()
-        if isListening then
-            keyButton.Text = "..."
-        else
-            keyButton.Text = currentKey.Name == "Unknown" and "None" or currentKey.Name
-        end
-    end
-
-    local inputConnection = nil
-    keyButton.MouseButton1Click:Connect(function()
-        if activeKeybind and activeKeybind ~= keyButton then return end
-
-        isListening = not isListening
-        activeKeybind = isListening and keyButton or nil
-        UpdateText()
-
-        if isListening then
-            inputConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-                if not gameProcessed and input.UserInputType == Enum.UserInputType.Keyboard then
-                    if input.KeyCode == Enum.KeyCode.Escape then
-                        currentKey = Enum.KeyCode.Unknown
-                    else
-                        currentKey = input.KeyCode
-                    end
-                    isListening = false
-                    activeKeybind = nil
-                    UpdateText()
-                    pcall(callback, currentKey)
-                    if inputConnection then inputConnection:Disconnect() end
-                end
-            end)
-        else
-            if inputConnection then inputConnection:Disconnect() end
-        end
-    end)
-    
-    UpdateText()
-    return container
-end
-
-function Gooey:CreateAction(options)
-    if not self.isMobile then return end -- Only for mobile
-
-    local text = options.Text or "A"
-    local callback = options.Callback or function() end
-
-    local actionButton = Instance.new("TextButton")
-    actionButton.Name = text .. "ActionButton"
-    actionButton.Size = UDim2.new(0, 45, 0, 45)
-    -- Position dynamically
-    local yPos = 100 + (#self.ActionButtons * 55)
-    actionButton.Position = UDim2.new(0, 22.5, 0, yPos)
-    actionButton.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-    actionButton.Text = text
-    actionButton.Font = Enum.Font.GothamBold
-    actionButton.TextColor3 = Color3.fromRGB(220, 220, 220)
-    actionButton.TextSize = 18
-    actionButton.ZIndex = 9
-    actionButton.Parent = self.ScreenGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = actionButton
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(80, 80, 95)
-    stroke.Thickness = 1
-    stroke.Parent = actionButton
-    
-    CreateDraggable(actionButton)
-
-    actionButton.MouseButton1Click:Connect(pcall, callback)
-    
-    table.insert(self.ActionButtons, actionButton)
-    return actionButton
-end
-
 function Gooey:ToggleVisibility()
     self.Visible = not self.Visible
     local tweenService = game:GetService("TweenService")
@@ -746,7 +710,7 @@ end
 local MyGui = Gooey.New("Gooey")
 
 -- 2. Create a window
-local myWindow = MyGui:CreateWindow("Gooey | v1.2")
+local myWindow = MyGui:CreateWindow("Gooey | v2.0")
 
 -- 3. Create tabs and get their content pages
 local pages = MyGui:CreateTabs({
@@ -757,91 +721,28 @@ local pages = MyGui:CreateTabs({
 -- 4. Set the initial toggle key (for PC)
 MyGui:SetToggleKey(Enum.KeyCode.RightShift)
 
--- 5. Create elements inside the pages
-if isMobile then
-    -- Mobile-specific quick actions
-    MyGui:CreateAction({
-        Text = "SP",
-        Callback = function() print("Speed Toggled!") end
-    })
-    MyGui:CreateAction({
-        Text = "TP",
-        Callback = function() print("Teleporting!") end
-    })
-else
-    -- PC-specific keybinds
-    MyGui:CreateKeybind({
-        Parent = pages.Combat,
-        Text = "Aimbot Key",
-        Default = Enum.KeyCode.F,
-        Callback = function(key)
-            print("Aimbot key set to: " .. key.Name)
-        end
-    })
-end
-
--- Common elements
-MyGui:CreateSlider({
+-- 5. Create NEW Toggles
+MyGui:CreateToggle({
     Parent = pages.Movement,
-    Text = "Walk Speed",
-    Min = 16,
-    Max = 200,
-    Default = 50,
-    Callback = function(value)
-        -- Example: game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = value
-        print("Walkspeed set to: " .. value)
+    Text = "Super Speed",
+    Default = false,
+    Callback = function(state)
+        print("Super Speed Toggled:", state)
+        -- Your walkspeed code here
     end
 })
 
-MyGui:CreateCheckbox({
-    Parent = pages.Movement,
-    Text = "Fly",
-    Callback = function(toggled)
-        print("Fly toggled: " .. tostring(toggled))
-    end
-})
-MyGui:CreateCheckbox({
-    Parent = pages.Movement,
-    Text = "NoClip",
-    Callback = function(toggled)
-        print("NoClip toggled: " .. tostring(toggled))
-    end
-})
-MyGui:CreateCheckbox({
-    Parent = pages.Movement,
-    Text = "Infinite Jump",
-    Callback = function(toggled)
-        print("Infinite Jump toggled: " .. tostring(toggled))
-    end
-})
-MyGui:CreateButton({
-    Parent = pages.Movement,
-    Text = "Reset Character",
-    Callback = function()
-        if game.Players.LocalPlayer.Character then
-            game.Players.LocalPlayer.Character:BreakJoints()
-        end
-    end
-})
-
-MyGui:CreateCheckbox({
+MyGui:CreateToggle({
     Parent = pages.Visuals,
-    Text = "Enable ESP",
+    Text = "Fullbright",
     Default = true,
-    Callback = function(toggled)
-        print("ESP toggled: " .. tostring(toggled))
+    Callback = function(state)
+        print("Fullbright Toggled:", state)
+        -- Your lighting code here
     end
 })
 
-MyGui:CreateKeybind({
-    Parent = pages.Misc,
-    Text = "Toggle GUI",
-    Default = Enum.KeyCode.RightShift,
-    Callback = function(key)
-        MyGui:SetToggleKey(key)
-    end
-})
-
+-- 6. Misc Section
 MyGui:CreateButton({
     Parent = pages.Misc,
     Text = "Destroy GUI",
