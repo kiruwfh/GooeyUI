@@ -2,7 +2,7 @@
 -- You would run this script in an executor after uploading Gooey.lua to your GitHub.
 
 -- 1. Load the library using the raw GitHub link
-local raw_link = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Gooey.lua"
+local raw_link = "https://raw.githubusercontent.com/kiruwfh/GooeyUI/main/Gooey.lua"
 local Gooey = loadstring(game:HttpGet(raw_link))()
 
 if not Gooey then
