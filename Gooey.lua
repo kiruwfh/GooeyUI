@@ -130,7 +130,7 @@ function Gooey:CreateWindow(title)
         
         -- Animate the window appearing
         local tweenService = game:GetService("TweenService")
-        local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) -- Faster animation
         local goals = {
             Size = targetSize,
             BackgroundTransparency = 0.1
@@ -301,7 +301,7 @@ function Gooey:CreateTabs(options)
             isTransitioning = true
 
             local tweenService = game:GetService("TweenService")
-            local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+            local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out) -- Faster animation
             
             local clickedIndex = i
             local slideDirection = (clickedIndex > activeTab.Index) and 1 or -1
@@ -656,8 +656,8 @@ end
 function Gooey:ToggleVisibility()
     self.Visible = not self.Visible
     local tweenService = game:GetService("TweenService")
-    local tweenInfoIn = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local tweenInfoOut = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
+    local tweenInfoIn = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) -- Faster animation
+    local tweenInfoOut = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.In) -- Faster animation
 
     for _, window in ipairs(self.Windows) do
         local targetSize = window:GetAttribute("TargetSize") or UDim2.new(0, 450, 0, 350)
@@ -710,12 +710,12 @@ end
 local MyGui = Gooey.New("Gooey")
 
 -- 2. Create a window
-local myWindow = MyGui:CreateWindow("Gooey | v2.0")
+local myWindow = MyGui:CreateWindow("Gooey | Final")
 
 -- 3. Create tabs and get their content pages
 local pages = MyGui:CreateTabs({
     Window = myWindow,
-    Tabs = {"Combat", "Movement", "Visuals", "Misc"}
+    Tabs = {"Movement", "Visuals", "World", "Misc"}
 })
 
 -- 4. Set the initial toggle key (for PC)
@@ -733,16 +733,90 @@ MyGui:CreateToggle({
 })
 
 MyGui:CreateToggle({
+    Parent = pages.Movement,
+    Text = "Fly",
+    Callback = function(state)
+        print("Fly toggled:", state)
+    end
+})
+
+MyGui:CreateToggle({
+    Parent = pages.Movement,
+    Text = "NoClip",
+    Callback = function(state)
+        print("NoClip toggled:", state)
+    end
+})
+
+MyGui:CreateToggle({
     Parent = pages.Visuals,
     Text = "Fullbright",
     Default = true,
     Callback = function(state)
         print("Fullbright Toggled:", state)
-        -- Your lighting code here
+        if state then
+            game:GetService("Lighting").Brightness = 1
+        else
+            game:GetService("Lighting").Brightness = 0
+        end
     end
 })
 
--- 6. Misc Section
+MyGui:CreateToggle({
+    Parent = pages.Visuals,
+    Text = "ESP",
+    Callback = function(state)
+        print("ESP toggled:", state)
+    end
+})
+
+MyGui:CreateSlider({
+    Parent = pages.Visuals,
+    Text = "Field of View",
+    Min = 70,
+    Max = 120,
+    Default = 70,
+    Callback = function(value)
+        game.workspace.CurrentCamera.FieldOfView = value
+    end
+})
+
+-- New World Tab
+MyGui:CreateToggle({
+    Parent = pages.World,
+    Text = "Infinite Yield",
+    Callback = function(state)
+        print("Infinite Yield toggled:", state)
+    end
+})
+
+MyGui:CreateSlider({
+    Parent = pages.World,
+    Text = "Time of Day",
+    Min = 0,
+    Max = 24,
+    Default = 14,
+    Callback = function(value)
+        game:GetService("Lighting").ClockTime = value
+    end
+})
+
+-- 6. Other elements still work as before
+MyGui:CreateSlider({
+    Parent = pages.Movement,
+    Text = "Jump Power",
+    Min = 50,
+    Max = 300,
+    Default = 50,
+    Callback = function(value)
+        print("Jump Power set to: " .. string.format("%.0f", value))
+        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+             game.Players.LocalPlayer.Character.Humanoid.JumpPower = value
+        end
+    end
+})
+
+-- 7. Misc Section
 MyGui:CreateButton({
     Parent = pages.Misc,
     Text = "Destroy GUI",
@@ -750,5 +824,7 @@ MyGui:CreateButton({
         MyGui.ScreenGui:Destroy()
     end
 })
+
+print("Gooey Final Version GUI Loaded Successfully!")
 
 return Gooey 
