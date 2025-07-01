@@ -1,5 +1,13 @@
+-- Singleton check to prevent double injection and UI duplication
+if _G.GooeyLoaded then
+    return _G.Gooey
+end
+
 local Gooey = {}
 Gooey.__index = Gooey
+
+local UserInputService = game:GetService("UserInputService")
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
 local function CreateDraggable(object)
     local dragging = false
@@ -42,11 +50,46 @@ function Gooey.New(name)
     self.ScreenGui.Name = name or "Gooey"
     self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     self.ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    self.ScreenGui.Enabled = false -- Start with main GUI hidden for mobile toggle
     
     self.Windows = {}
-    self.Visible = true
+    self.Visible = false -- Start with GUI logically hidden
     self.ToggleKey = Enum.KeyCode.Unknown
     self.ToggleConnection = nil
+    self.isMobile = isMobile
+    self.ActionButtons = {}
+
+    if self.isMobile then
+        -- On mobile, create a dedicated toggle button
+        local mobileToggle = Instance.new("TextButton")
+        mobileToggle.Name = "GooeyMobileToggle"
+        mobileToggle.Size = UDim2.new(0, 50, 0, 50)
+        mobileToggle.Position = UDim2.new(0, 20, 0.5, -25)
+        mobileToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        mobileToggle.Text = ""
+        mobileToggle.ZIndex = 10
+        mobileToggle.Parent = self.ScreenGui
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(1, 0)
+        corner.Parent = mobileToggle
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(80, 80, 100)
+        stroke.Thickness = 1
+        stroke.Parent = mobileToggle
+        
+        -- Let's add an icon later maybe, for now empty
+        CreateDraggable(mobileToggle)
+
+        mobileToggle.MouseButton1Click:Connect(function()
+            self:ToggleVisibility()
+        end)
+    else
+        -- On PC, GUI is visible by default unless toggled
+        self.Visible = true 
+        self.ScreenGui.Enabled = true
+    end
 
     return self
 end
@@ -131,12 +174,20 @@ function Gooey:CreateWindow(title)
     -- Animate the window appearing
     local tweenService = game:GetService("TweenService")
     local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    local goals = {
-        Size = targetSize,
-        BackgroundTransparency = 0.1
-    }
-    local tween = tweenService:Create(windowFrame, tweenInfo, goals)
-    tween:Play()
+    
+    if not self.isMobile then
+        -- Only play intro animation on PC
+        local goals = {
+            Size = targetSize,
+            BackgroundTransparency = 0.1
+        }
+        local tween = tweenService:Create(windowFrame, tweenInfo, goals)
+        tween:Play()
+    else
+        -- On mobile, just set properties instantly
+        windowFrame.Size = targetSize
+        windowFrame.BackgroundTransparency = 0.1
+    end
 
     table.insert(self.Windows, windowFrame)
 
@@ -509,6 +560,12 @@ end
 
 local activeKeybind = nil
 function Gooey:CreateKeybind(options)
+    if self.isMobile then
+        -- This component is not for mobile, use CreateAction instead
+        warn("Gooey: CreateKeybind is not recommended for mobile. Use CreateAction.")
+        return
+    end
+
     local parent = options.Parent
     local text = options.Text or "Keybind"
     local defaultKey = options.Default or Enum.KeyCode.Unknown
@@ -588,39 +645,69 @@ function Gooey:CreateKeybind(options)
     return container
 end
 
+function Gooey:CreateAction(options)
+    if not self.isMobile then return end -- Only for mobile
+
+    local text = options.Text or "A"
+    local callback = options.Callback or function() end
+
+    local actionButton = Instance.new("TextButton")
+    actionButton.Name = text .. "ActionButton"
+    actionButton.Size = UDim2.new(0, 45, 0, 45)
+    -- Position dynamically
+    local yPos = 100 + (#self.ActionButtons * 55)
+    actionButton.Position = UDim2.new(0, 22.5, 0, yPos)
+    actionButton.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    actionButton.Text = text
+    actionButton.Font = Enum.Font.GothamBold
+    actionButton.TextColor3 = Color3.fromRGB(220, 220, 220)
+    actionButton.TextSize = 18
+    actionButton.ZIndex = 9
+    actionButton.Parent = self.ScreenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = actionButton
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(80, 80, 95)
+    stroke.Thickness = 1
+    stroke.Parent = actionButton
+    
+    CreateDraggable(actionButton)
+
+    actionButton.MouseButton1Click:Connect(pcall, callback)
+    
+    table.insert(self.ActionButtons, actionButton)
+    return actionButton
+end
+
 function Gooey:ToggleVisibility()
     self.Visible = not self.Visible
     local tweenService = game:GetService("TweenService")
     local tweenInfoIn = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
     local tweenInfoOut = TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In)
 
+    -- Toggle the main ScreenGui's enabled state
+    self.ScreenGui.Enabled = self.Visible
+
     for _, window in ipairs(self.Windows) do
         local targetSize = window:GetAttribute("TargetSize") or UDim2.new(0, 450, 0, 350)
 
         if self.Visible then
+            -- The animation part for PC is handled by the ScreenGui being enabled
+            -- On mobile, we might just have it pop in.
             window.Visible = true
-            local goalsIn = {
-                Size = targetSize,
-                BackgroundTransparency = 0.1
-            }
-            tweenService:Create(window, tweenInfoIn, goalsIn):Play()
         else
-            local goalsOut = {
-                Size = UDim2.new(targetSize.X.Scale, 0, targetSize.Y.Scale, 0),
-                BackgroundTransparency = 1
-            }
-            local tween = tweenService:Create(window, tweenInfoOut, goalsOut)
-            tween.Completed:Connect(function()
-                if window.Parent then -- Check if still exists
-                    window.Visible = false
-                end
-            end)
-            tween:Play()
+            -- And pop-out on mobile.
+            window.Visible = false
         end
     end
 end
 
 function Gooey:SetToggleKey(key)
+    if self.isMobile then return end -- Don't set keyboard binds on mobile
+
     if self.ToggleConnection then
         self.ToggleConnection:Disconnect()
         self.ToggleConnection = nil
@@ -640,7 +727,7 @@ end
 -- =======================================================
 
 -- 1. Create a new GUI manager
-local MyGui = Gooey.New("MyGooey")
+local MyGui = Gooey.New("Gooey")
 
 -- 2. Create a window
 local myWindow = MyGui:CreateWindow("Gooey | v1.0")
@@ -651,19 +738,33 @@ local pages = MyGui:CreateTabs({
     Tabs = {"Combat", "Movement", "Visuals", "Misc"}
 })
 
--- 4. Set the initial toggle key
+-- 4. Set the initial toggle key (for PC)
 MyGui:SetToggleKey(Enum.KeyCode.RightShift)
 
 -- 5. Create elements inside the pages
-MyGui:CreateKeybind({
-    Parent = pages.Combat,
-    Text = "Aimbot Key",
-    Default = Enum.KeyCode.F,
-    Callback = function(key)
-        print("Aimbot key set to: " .. key.Name)
-    end
-})
+if isMobile then
+    -- Mobile-specific quick actions
+    MyGui:CreateAction({
+        Text = "SP",
+        Callback = function() print("Speed Toggled!") end
+    })
+    MyGui:CreateAction({
+        Text = "TP",
+        Callback = function() print("Teleporting!") end
+    })
+else
+    -- PC-specific keybinds
+    MyGui:CreateKeybind({
+        Parent = pages.Combat,
+        Text = "Aimbot Key",
+        Default = Enum.KeyCode.F,
+        Callback = function(key)
+            print("Aimbot key set to: " .. key.Name)
+        end
+    })
+end
 
+-- Common elements
 MyGui:CreateSlider({
     Parent = pages.Movement,
     Text = "Walk Speed",
@@ -730,7 +831,10 @@ MyGui:CreateButton({
     Text = "Destroy GUI",
     Callback = function()
         MyGui.ScreenGui:Destroy()
+        _G.GooeyLoaded = nil -- Allow re-injection
     end
 })
+
+_G.GooeyLoaded = Gooey -- Mark library as loaded
 
 return Gooey 
