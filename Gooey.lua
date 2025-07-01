@@ -45,8 +45,15 @@ function Gooey.New(name)
     local self = setmetatable({}, Gooey)
     local guiName = name or "Gooey"
 
-    -- FIX: Prevent UI duplication by destroying any old GUI on re-injection
-    local playerGui = game:GetService("PlayerGui")
+    -- FIX: Use the most robust method to get the local player and their GUI
+    local player = game:GetService("Players").LocalPlayer
+    if not player then
+        -- This ensures the script doesn't fail if it runs before the player is fully available
+        player = game:GetService("Players").PlayerAdded:Wait()
+    end
+    local playerGui = player:WaitForChild("PlayerGui")
+
+    -- Prevent UI duplication by destroying any old GUI on re-injection
     local oldGui = playerGui:FindFirstChild(guiName)
     if oldGui then
         oldGui:Destroy()
