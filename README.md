@@ -3,9 +3,6 @@
 A minimalistic and modern GUI library designed to be powerful, easy to use, 
 and visually appealing, all within a single, self-contained script.
 
-![Gooey Preview](https://i.imgur.com/your_preview_image.png) 
-*(You can replace this with a real screenshot of your GUI)*
-
 ## Features
 
 - **Easy to Use:** Simple and intuitive API.
@@ -20,7 +17,7 @@ To use Gooey in your own script, you need to load it using `loadstring`. You'll 
 
 ```lua
 -- Replace with your own GitHub raw link
-local raw_link = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/Gooey.lua"
+local raw_link = "https://raw.githubusercontent.com/kiruwfh/GooeyUI/main/Gooey.lua"
 
 local Gooey = loadstring(game:HttpGet(raw_link))()
 
