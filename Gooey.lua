@@ -58,7 +58,8 @@ function Gooey.New(name)
 
     self.ScreenGui = Instance.new("ScreenGui")
     self.ScreenGui.Name = guiName
-    self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    self.ScreenGui.ResetOnSpawn = false
+    self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     self.ScreenGui.Parent = playerGui
     self.ScreenGui.Enabled = true -- The GUI container is always enabled.
 
