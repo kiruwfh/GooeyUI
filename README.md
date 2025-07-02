@@ -1,52 +1,68 @@
-# Gooey | A Simple & Stylish GUI Library for Roblox
+# Gooey.lua  GUI Library
 
-A minimalistic and modern GUI library designed to be powerful, easy to use, 
-and visually appealing, all within a single, self-contained script.
+**Gooey.lua** is a lightweight, modern, and adaptable GUI library for Roblox scripts. It's designed for rapid development of user interfaces that work seamlessly on both PC and mobile devices.
 
 ## Features
 
-- **Easy to Use:** Simple and intuitive API.
-- **Modern Design:** Stylish and clean UI that looks great out of the box.
-- **Fully Animated:** Smooth, tweened animations for all interactions.
-- **Customizable:** All core components needed for a modern cheat menu.
-- **Self-Contained:** Everything is in one file, perfect for `loadstring`.
+- **Cross-Platform:** Automatically adapts to the user's device. Creates keybinds for PC users and dedicated action buttons for mobile users.
+- **Persistent UI:** The interface remains on screen even after the player's character respawns.
+- **Simple & Clean API:** Create complex UIs with minimal, easy-to-understand code.
+- **Lightweight:** No external dependencies, just one file to manage.
 
-## How to Use
+## Installation
 
-To use Gooey in your own script, you need to load it using `loadstring`. You'll need to upload the `Gooey.lua` file to your GitHub repository and use the "Raw" file link.
+1.  Download the `Gooey.lua` file.
+2.  Place it in your script's environment. The most common method is to place it in the same directory as your main script.
+
+## Usage
+
+Using Gooey is straightforward. You initialize the library and then start adding elements to it.
+
+The core of the library is the universal `Gooey:CreateToggle()` function, which creates a window with a title and a toggle switch.
+
+### Example
+
+Here is how you can create a simple UI Hub with one feature, "Auto Farm," which can be toggled with the `E` key on PC or a dedicated button on mobile.
 
 ```lua
--- Replace with your own GitHub raw link
-local raw_link = "https://raw.githubusercontent.com/kiruwfh/GooeyUI/main/Gooey.lua"
+-- Load the Gooey library
+local Gooey = loadstring(game:HttpGet("https://raw.githubusercontent.com/your-username/your-repo/main/Gooey.lua"))()
 
-local Gooey = loadstring(game:HttpGet(raw_link))()
-
--- Now you are ready to create your GUI!
--- See the example.lua file for a full usage example.
-
-local MyGui = Gooey.New("MyGooey")
-local myWindow = MyGui:CreateWindow("My Awesome Menu")
-
-local pages = MyGui:CreateTabs({
-    Window = myWindow,
-    Tabs = {"Combat", "Movement"}
+-- Create the main window (hub)
+local mainHub = Gooey:CreateWindow({
+    Title = "My Awesome Hub",
+    Size = UDim2.fromOffset(300, 400),
+    Draggable = true
 })
 
-MyGui:CreateButton({
-    Parent = pages.Combat,
-    Text = "Click Me!",
-    Callback = function()
-        print("Button clicked!")
+-- Create a tab within the window
+local mainTab = mainHub:CreateTab("Main Features")
+
+-- Create a toggle for a feature
+mainTab:CreateToggle({
+    Title = "Auto Farm",
+    Description = "Automatically collects resources for you.",
+    Key = Enum.KeyCode.E, -- The key to press on PC
+    Callback = function(state)
+        if state then
+            print("Auto Farm has been enabled!")
+            -- Start your auto-farming logic here
+        else
+            print("Auto Farm has been disabled.")
+            -- Stop your auto-farming logic here
+        end
     end
 })
 ```
+
+This simple script will produce a fully functional UI that works perfectly on both PC and mobile platforms.
 
 ## API Reference
 
 ### `Gooey.New(name)`
 Creates a new Gooey instance. This is the first thing you should call.
 - **`name`** (string) [Optional]: The name for the ScreenGui instance.
-- **Returns:** (table) The Gooey instance.
+- **Returns:** (table) The Gooey instance. The instance contains the boolean `isMobile`.
 
 ### `Gooey:CreateWindow(title)`
 Creates a new draggable window.
@@ -86,15 +102,21 @@ Creates a draggable slider for number values.
     - **`Callback`** (function): Runs on change, receives the new number value as an argument.
 
 ### `Gooey:CreateKeybind(options)`
-Creates a keybind button.
+Creates a keybind button. **(PC Only)**
 - **`options`** (table):
     - **`Parent`** (Instance): The page or frame.
     - **`Text`** (string): The label for the keybind.
     - **`Default`** (Enum.KeyCode) [Optional]: The initial keybind (default: `Unknown`).
     - **`Callback`** (function): Runs when a new key is set, receives the `KeyCode` enum as an argument.
 
+### `Gooey:CreateAction(options)`
+Creates a draggable, on-screen action button. **(Mobile Only)**
+- **`options`** (table):
+    - **`Text`** (string): The text on the button (keep it short, e.g., 3-4 letters).
+    - **`Callback`** (function): The function to run when the button is clicked.
+
 ### `Gooey:SetToggleKey(key)`
-Sets the key to toggle the GUI's visibility.
+Sets the key to toggle the GUI's visibility. **(PC Only)**
 - **`key`** (Enum.KeyCode): The key to bind.
 
 ## License
