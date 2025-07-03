@@ -112,7 +112,7 @@ function Gooey.New(name)
     return self
 end
 
-function Gooey:CreateWindow(title)
+function Gooey:CreateWindow(options)
     local windowFrame = Instance.new("Frame")
     windowFrame.Name = "Window"
     windowFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center the anchor for scaling animations
@@ -175,7 +175,7 @@ function Gooey:CreateWindow(title)
     titleLabel.Size = UDim2.new(1, 0, 1, 0)
     titleLabel.Position = UDim2.new(0, 0, 0, 0)
     titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title or "Gooey"
+    titleLabel.Text = options.Title or "Gooey"
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLabel.Font = Enum.Font.GothamSemibold
     titleLabel.TextSize = 16
