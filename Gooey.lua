@@ -114,7 +114,7 @@ end
 
 function Gooey:CreateWindow(title)
     local windowFrame = Instance.new("Frame")
-    windowFrame.Name = "GooeyWindow"
+    windowFrame.Name = "Window"
     windowFrame.AnchorPoint = Vector2.new(0.5, 0.5) -- Center the anchor for scaling animations
     
     -- Target properties for the animation
@@ -125,7 +125,7 @@ function Gooey:CreateWindow(title)
     
     if self.Visible then -- Only play intro animation if initially visible (on PC)
         -- Initial state for animation
-        windowFrame.Size = targetSize
+        windowFrame.Size = UDim2.new(targetSize.X.Scale, 0, targetSize.Y.Scale, 0)
         windowFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         windowFrame.BackgroundTransparency = 1
         
@@ -160,7 +160,7 @@ function Gooey:CreateWindow(title)
     stroke.Parent = windowFrame
 
     local topBar = Instance.new("Frame")
-    topBar.Name = "GooeyTopBar"
+    topBar.Name = "TopBar"
     topBar.Size = UDim2.new(1, 0, 0, 35)
     topBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     topBar.BorderSizePixel = 0
@@ -171,7 +171,7 @@ function Gooey:CreateWindow(title)
     topBarCorner.Parent = topBar
 
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "GooeyTitle"
+    titleLabel.Name = "Title"
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLabel.Size = UDim2.new(1, 0, 1, 0)
     titleLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -182,7 +182,7 @@ function Gooey:CreateWindow(title)
     titleLabel.Parent = topBar
 
     local tabContainer = Instance.new("Frame")
-    tabContainer.Name = "GooeyTabContainer"
+    tabContainer.Name = "TabContainer"
     tabContainer.Size = UDim2.new(1, 0, 0, 40)
     tabContainer.Position = UDim2.new(0, 0, 0, 35)
     tabContainer.BackgroundTransparency = 1
@@ -196,13 +196,13 @@ function Gooey:CreateWindow(title)
     tabLayout.Padding = UDim.new(0, 5)
     tabLayout.Parent = tabContainer
     
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Name = "GooeyContentFrame"
-    contentFrame.Size = UDim2.new(1, -20, 1, -95)
-    contentFrame.Position = UDim2.new(0, 10, 0, 85)
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.ClipsDescendants = true
-    contentFrame.Parent = windowFrame
+    local pagesContainer = Instance.new("Frame")
+    pagesContainer.Name = "PagesContainer"
+    pagesContainer.Size = UDim2.new(1, 0, 1, -75) -- 35 for topbar, 40 for tabs
+    pagesContainer.Position = UDim2.new(0, 0, 0, 75)
+    pagesContainer.BackgroundTransparency = 1
+    pagesContainer.ClipsDescendants = true
+    pagesContainer.Parent = windowFrame
 
     windowFrame.Parent = self.ScreenGui
 
@@ -249,8 +249,8 @@ function Gooey:CreateTabs(options)
     local activeTabColor = Color3.fromRGB(70, 70, 85)
     local inactiveTabColor = Color3.fromRGB(40, 40, 50)
     
-    local tabContainer = window:FindFirstChild("GooeyTabContainer")
-    local pagesContainer = window:FindFirstChild("GooeyContentFrame")
+    local tabContainer = window:FindFirstChild("TabContainer")
+    local pagesContainer = window:FindFirstChild("PagesContainer")
 
     if not (tabContainer and pagesContainer) then
         warn("Gooey: This window does not support tabs.")
