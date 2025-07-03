@@ -61,6 +61,7 @@ function Gooey.New(name)
     self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     self.ScreenGui.Parent = playerGui
     self.ScreenGui.Enabled = true -- The GUI container is always enabled.
+    self.ScreenGui.ResetOnSpawn = false -- Prevent GUI from disappearing on death
 
     self.Windows = {}
     self.Visible = not isMobile -- GUI is visible by default on PC, hidden on mobile
@@ -171,11 +172,11 @@ function Gooey:CreateWindow(title)
 
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Name = "Title"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLabel.Size = UDim2.new(1, 0, 1, 0)
     titleLabel.Position = UDim2.new(0, 0, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = title or "Gooey"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLabel.Font = Enum.Font.GothamSemibold
     titleLabel.TextSize = 16
     titleLabel.Parent = topBar
@@ -205,6 +206,36 @@ function Gooey:CreateWindow(title)
 
     windowFrame.Parent = self.ScreenGui
 
+    local function CreateDraggable(frame)
+        local dragging = false
+        local dragInput = nil
+        local dragStart = nil
+        local startPos = nil
+
+        frame.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = windowFrame.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+
+        frame.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                if dragging then
+                    local delta = input.Position - dragStart
+                    windowFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                end
+            end
+        end)
+    end
+    
     CreateDraggable(topBar)
     
     table.insert(self.Windows, windowFrame)
