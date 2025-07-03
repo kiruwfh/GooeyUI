@@ -171,7 +171,7 @@ function Gooey:CreateWindow(title)
     topBarCorner.Parent = topBar
 
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
+    titleLabel.Name = "GooeyTitle"
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLabel.Size = UDim2.new(1, 0, 1, 0)
     titleLabel.Position = UDim2.new(0, 0, 0, 0)
